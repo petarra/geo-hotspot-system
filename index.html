@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GeoFire Kalbar - SIG Sebaran Titik Api 2026</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <!-- Leaflet MarkerCluster CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+
+  <!-- App Custom CSS -->
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body class="map-app-body">
+
+  <!-- Loading Screen -->
+  <div id="loading-screen" class="loading-screen">
+    <div class="loader-content">
+      <div class="fire-spinner">
+        <div class="flame flame-1"></div>
+        <div class="flame flame-2"></div>
+        <div class="flame flame-3"></div>
+      </div>
+      <h2 class="loader-title">Memuat GIS Sebaran Hotspot</h2>
+      <p class="loader-subtitle" id="loader-status">Menyiapkan basis data titik api Kalimantan Barat...</p>
+      <div class="loader-bar-bg">
+        <div class="loader-bar-fill" id="loader-bar"></div>
+      </div>
+      <span class="loader-percent" id="loader-percent">0%</span>
+    </div>
+  </div>
+
+  <!-- Top App Navbar (Compact & Sleek) -->
+  <header class="app-navbar">
+    <div class="nav-left">
+      <button id="btn-toggle-sidebar" class="btn-nav-icon" title="Buka / Tutup Filter Sidebar" aria-label="Toggle filter sidebar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="3" y1="12" x2="21" y2="12"></line>
+          <line x1="3" y1="6" x2="21" y2="6"></line>
+          <line x1="3" y1="18" x2="21" y2="18"></line>
+        </svg>
+      </button>
+      <div class="nav-brand">
+        <div class="brand-flame-icon">🔥</div>
+        <div class="brand-text-group">
+          <span class="brand-title">GeoFire Kalbar</span>
+          <span class="brand-tag">Satelit NASA-NOAA20</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Center active status pills -->
+    <div class="nav-center">
+      <div class="active-badge" id="nav-active-date">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="badge-icon">
+          <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+          <line x1="16" y1="2" x2="16" y2="6"></line>
+          <line x1="8" y1="2" x2="8" y2="6"></line>
+          <line x1="3" y1="10" x2="21" y2="10"></line>
+        </svg>
+        <span id="nav-date-label">Semua Periode (1 Jun - 29 Sep 2026)</span>
+      </div>
+
+      <div class="active-badge count-badge" id="nav-active-count">
+        <span class="pulse-dot"></span>
+        <span id="nav-count-label">68.595 Titik Api</span>
+      </div>
+    </div>
+
+    <!-- Right Controls: Basemap Switcher & Theme -->
+    <div class="nav-right">
+      <div class="basemap-pills">
+        <button class="btn-basemap active" data-basemap="satellite" title="Citra Satelit Esri">Satelit</button>
+        <button class="btn-basemap" data-basemap="dark" title="Peta Gelap Modern">Gelap</button>
+        <button class="btn-basemap" data-basemap="osm" title="OpenStreetMap">Peta Jalan</button>
+      </div>
+
+      <button id="theme-toggle" class="btn-nav-icon" title="Ganti Tema (Gelap / Terang)" aria-label="Toggle theme">
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="5"></circle>
+          <line x1="12" y1="1" x2="12" y2="3"></line>
+          <line x1="12" y1="21" x2="12" y2="23"></line>
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+          <line x1="1" y1="12" x2="3" y2="12"></line>
+          <line x1="21" y1="12" x2="23" y2="12"></line>
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+        </svg>
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Workspace (Sidebar + Map Viewport) -->
+  <div class="app-workspace">
+    <!-- Left Collapsible Sidebar -->
+    <aside class="app-sidebar" id="app-sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-title-wrap">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="sidebar-title-icon">
+            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+          </svg>
+          <h3>Filter Sebaran</h3>
+        </div>
+        <button id="btn-close-sidebar" class="btn-icon-xs" title="Sembunyikan Sidebar">✕</button>
+      </div>
+
+      <div class="sidebar-content">
+        <!-- Filter Kabupaten -->
+        <div class="sidebar-group">
+          <label for="filter-kabupaten">Kabupaten / Kota</label>
+          <div class="select-wrapper">
+            <select id="filter-kabupaten">
+              <option value="ALL">Semua Kabupaten/Kota (14 Wilayah)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Filter Confidence -->
+        <div class="sidebar-group">
+          <label>Tingkat Kepercayaan</label>
+          <div class="confidence-chips-col">
+            <label class="chip chip-high">
+              <input type="checkbox" id="conf-high" value="H" checked />
+              <span class="chip-dot"></span>
+              <span>Tinggi (High) &gt;80%</span>
+            </label>
+            <label class="chip chip-medium">
+              <input type="checkbox" id="conf-med" value="M" checked />
+              <span class="chip-dot"></span>
+              <span>Sedang (Medium) 30-80%</span>
+            </label>
+            <label class="chip chip-low">
+              <input type="checkbox" id="conf-low" value="L" checked />
+              <span class="chip-dot"></span>
+              <span>Rendah (Low) &lt;30%</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Search Kecamatan / Desa -->
+        <div class="sidebar-group">
+          <label for="filter-search">Cari Kecamatan / Desa</label>
+          <div class="search-input-wrapper">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <input type="text" id="filter-search" placeholder="Ketik nama lokasi..." />
+          </div>
+        </div>
+
+        <!-- Quick Month Selection -->
+        <div class="sidebar-group">
+          <label>Pilih Cepat Bulan</label>
+          <div class="month-pills-grid">
+            <button class="btn-month-pill active" data-month="ALL">Semua</button>
+            <button class="btn-month-pill" data-month="2026-06">Juni (387)</button>
+            <button class="btn-month-pill" data-month="2026-07">Juli (4.347)</button>
+            <button class="btn-month-pill" data-month="2026-08">Agustus (38.693)</button>
+            <button class="btn-month-pill" data-month="2026-09">September (25.168)</button>
+          </div>
+        </div>
+
+        <!-- Reset Button -->
+        <div class="sidebar-actions">
+          <button id="btn-reset-filter" class="btn btn-secondary btn-block">
+            🔄 Reset Semua Filter
+          </button>
+        </div>
+
+        <!-- Mini Quick Info in Sidebar -->
+        <div class="sidebar-stats">
+          <div class="stat-mini-card">
+            <span class="stat-mini-label">Wilayah Terbanyak</span>
+            <span class="stat-mini-val" id="mini-top-kab">KETAPANG</span>
+            <span class="stat-mini-sub" id="mini-top-kab-sub">35.469 Titik (51.7%)</span>
+          </div>
+          <div class="stat-mini-card">
+            <span class="stat-mini-label">Puncak Kebakaran</span>
+            <span class="stat-mini-val" id="mini-peak-month">Agustus 2026</span>
+            <span class="stat-mini-sub" id="mini-peak-month-sub">38.693 Titik (56.4%)</span>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Map Viewport -->
+    <main class="map-viewport">
+      <!-- Leaflet Map Container -->
+      <div id="map-container" class="map-container"></div>
+
+      <!-- Floating Map Top Toolbar (Layer Mode Switcher & Tools) -->
+      <div class="map-floating-top">
+        <div class="view-mode-group">
+          <button class="mode-btn active" data-mode="cluster" id="mode-cluster">
+            📍 Klaster Titik
+          </button>
+          <button class="mode-btn" data-mode="heatmap" id="mode-heatmap">
+            🔥 Heatmap Kepadatan
+          </button>
+          <button class="mode-btn" data-mode="regency" id="mode-regency">
+            🏛️ Ringkasan Wilayah
+          </button>
+        </div>
+
+        <div class="map-tools-group">
+          <button id="btn-reset-map" class="btn-tool" title="Pusatkan Peta ke Kalbar">🎯 Reset Posisi</button>
+          <button id="btn-fullscreen-map" class="btn-tool" title="Layar Penuh Peta">⛶ Layar Penuh</button>
+        </div>
+      </div>
+
+      <!-- Floating Action Buttons (FAB) on Map to Open Drawer -->
+      <div class="map-fab-group">
+        <button class="fab-btn" data-drawer="stats" id="fab-stats">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="20" x2="18" y2="10"></line>
+            <line x1="12" y1="20" x2="12" y2="4"></line>
+            <line x1="6" y1="20" x2="6" y2="14"></line>
+          </svg>
+          <span>Statistik & Grafik</span>
+        </button>
+
+        <button class="fab-btn" data-drawer="table" id="fab-table">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+            <line x1="3" y1="9" x2="21" y2="9"></line>
+            <line x1="3" y1="15" x2="21" y2="15"></line>
+            <line x1="9" y1="3" x2="9" y2="21"></line>
+          </svg>
+          <span>Tabel Data (<span id="fab-table-count">68.595</span>)</span>
+        </button>
+
+        <button class="fab-btn" data-drawer="info" id="fab-info">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="16" x2="12" y2="12"></line>
+            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+          </svg>
+          <span>Info Data</span>
+        </button>
+      </div>
+
+      <!-- Floating Map Legend -->
+      <div class="map-legend-card glass-panel" id="map-legend">
+        <div class="legend-header">
+          <h4>Legenda Peta</h4>
+          <button class="legend-collapse-btn" id="legend-toggle">−</button>
+        </div>
+        <div class="legend-body" id="legend-content">
+          <div class="legend-row">
+            <span class="legend-symbol mark-high"></span>
+            <div class="legend-info">
+              <strong>High (&gt;80%)</strong>
+              <span>Anomali kebakaran tinggi</span>
+            </div>
+          </div>
+          <div class="legend-row">
+            <span class="legend-symbol mark-med"></span>
+            <div class="legend-info">
+              <strong>Medium (30-80%)</strong>
+              <span>Indikasi panas sedang</span>
+            </div>
+          </div>
+          <div class="legend-row">
+            <span class="legend-symbol mark-low"></span>
+            <div class="legend-info">
+              <strong>Low (&lt;30%)</strong>
+              <span>Potensi pantulan / awan</span>
+            </div>
+          </div>
+          <div class="legend-divider"></div>
+          <div class="legend-row">
+            <div class="heat-gradient-bar"></div>
+          </div>
+          <div class="legend-heat-labels">
+            <span>Rendah</span>
+            <span>Intensitas Heatmap</span>
+            <span>Tinggi</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Map Loading Spinner Overlay -->
+      <div id="map-render-indicator" class="map-render-indicator">
+        <span class="spin-ring"></span>
+        <span>Memperbarui layer peta...</span>
+      </div>
+
+      <!-- Coordinate Bar -->
+      <div class="map-coord-bar">
+        <span id="coord-display">Pusat Kalbar: Lat -0.9883°, Lng 110.4191°</span>
+        <span id="zoom-display">Zoom: 7</span>
+      </div>
+
+      <!-- BOTTOM INTERACTIVE DATE SLIDER (Core Map-Centric Feature) -->
+      <div class="date-slider-bar glass-panel" id="date-slider-bar">
+        <div class="slider-header-row">
+          <!-- Slider Mode Switcher: Single vs Range vs All -->
+          <div class="slider-mode-group">
+            <button class="btn-slider-mode" data-slider-mode="single" id="mode-single-date">📅 Tanggal Tunggal</button>
+            <button class="btn-slider-mode" data-slider-mode="range" id="mode-range-date">↔️ Rentang Tanggal</button>
+            <button class="btn-slider-mode active" data-slider-mode="all" id="mode-all-date">🌐 Semua Periode</button>
+          </div>
+
+          <!-- Playback Controls for Time Animation -->
+          <div class="slider-play-controls">
+            <button id="btn-slider-play" class="btn-play-pause" title="Putar Otomatis Perjalanan Waktu Hotspot">
+              <span id="play-icon">▶</span>
+              <span id="play-text">Putar</span>
+            </button>
+            <select id="playback-speed" class="select-playback-speed" title="Kecepatan Putar">
+              <option value="800">1x (Pelan)</option>
+              <option value="400" selected>2x (Sedang)</option>
+              <option value="180">4x (Cepat)</option>
+            </select>
+          </div>
+
+          <!-- Active Slider Date Display -->
+          <div class="slider-date-display">
+            <span class="slider-current-date" id="slider-date-text">Semua Periode (1 Jun - 29 Sep 2026)</span>
+            <span class="slider-current-count" id="slider-count-badge">68.595 Titik</span>
+          </div>
+        </div>
+
+        <!-- Sparkline Density Canvas Histogram -->
+        <div class="sparkline-container">
+          <canvas id="timeline-sparkline"></canvas>
+        </div>
+
+        <!-- Sliders Container -->
+        <div class="slider-track-box">
+          <!-- 1. Single Date Slider -->
+          <input type="range" id="single-date-slider" min="0" max="115" value="68" class="time-range-input" style="display:none;" />
+          
+          <!-- 2. Dual Range Slider (Left & Right handles) -->
+          <div class="dual-range-wrapper" id="dual-range-container" style="display:none;">
+            <input type="range" id="range-slider-start" min="0" max="115" value="0" class="time-range-input thumb-left" />
+            <input type="range" id="range-slider-end" min="0" max="115" value="115" class="time-range-input thumb-right" />
+          </div>
+
+          <!-- 3. All Period Notice Bar -->
+          <div class="all-period-bar" id="all-period-display">
+            <span>Menampilkan akumulasi seluruh data 116 hari pengamatan (Juni s/d September 2026)</span>
+          </div>
+        </div>
+
+        <!-- Month Milestone Labels -->
+        <div class="slider-month-milestones">
+          <span class="milestone" data-idx="0">1 Jun</span>
+          <span class="milestone" data-idx="30">1 Jul</span>
+          <span class="milestone" data-idx="61">1 Agu (Puncak)</span>
+          <span class="milestone" data-idx="92">1 Sep</span>
+          <span class="milestone" data-idx="115">29 Sep</span>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- BOTTOM DRAWER / SHEET OVERLAY (For Secondary Views: Stats, Table, Info) -->
+  <div class="bottom-drawer-backdrop" id="drawer-backdrop"></div>
+  <div class="bottom-drawer" id="bottom-drawer">
+    <!-- Top Drag Handle -->
+    <div class="drawer-drag-handle" id="drawer-drag-handle">
+      <div class="handle-bar"></div>
+    </div>
+
+    <!-- Drawer Navigation Tabs & Actions -->
+    <div class="drawer-header">
+      <div class="drawer-tabs">
+        <button class="drawer-tab active" data-panel="stats" id="tab-stats">
+          📊 Statistik & Grafik
+        </button>
+        <button class="drawer-tab" data-panel="table" id="tab-table">
+          📋 Tabel Data Lengkap
+        </button>
+        <button class="drawer-tab" data-panel="info" id="tab-info">
+          ℹ️ Metodologi & Satelit
+        </button>
+      </div>
+
+      <div class="drawer-actions">
+        <button id="btn-expand-drawer" class="btn-drawer-tool" title="Perbesar / Perkecil Panel">⛶</button>
+        <button id="btn-close-drawer" class="btn-drawer-tool" title="Tutup Panel">✕</button>
+      </div>
+    </div>
+
+    <!-- Drawer Content Panels -->
+    <div class="drawer-body">
+      <!-- 1. Panel Statistik -->
+      <div class="drawer-panel active" id="panel-stats">
+        <!-- Top Metric Summary Cards -->
+        <div class="kpi-grid">
+          <div class="kpi-card glass-panel">
+            <div class="kpi-icon-wrap fire-gradient">🔥</div>
+            <div class="kpi-content">
+              <span class="kpi-label">Total Titik Panas</span>
+              <div class="kpi-value counter-anim" id="stat-total">68.595</div>
+              <span class="kpi-sub">Data terfilter aktif</span>
+            </div>
+          </div>
+
+          <div class="kpi-card glass-panel">
+            <div class="kpi-icon-wrap red-gradient">⚠️</div>
+            <div class="kpi-content">
+              <span class="kpi-label">Confidence Tinggi (High)</span>
+              <div class="kpi-value counter-anim text-danger" id="stat-high">2.479</div>
+              <span class="kpi-sub text-danger-sub">Akurasi kebakaran &gt; 80%</span>
+            </div>
+          </div>
+
+          <div class="kpi-card glass-panel">
+            <div class="kpi-icon-wrap orange-gradient">📍</div>
+            <div class="kpi-content">
+              <span class="kpi-label">Wilayah Terbanyak</span>
+              <div class="kpi-value highlight-name" id="stat-top-kab">KETAPANG</div>
+              <span class="kpi-sub" id="stat-top-kab-sub">35.469 Titik (51.7%)</span>
+            </div>
+          </div>
+
+          <div class="kpi-card glass-panel">
+            <div class="kpi-icon-wrap purple-gradient">📅</div>
+            <div class="kpi-content">
+              <span class="kpi-label">Bulan Puncak</span>
+              <div class="kpi-value highlight-name" id="stat-peak-month">Agustus 2026</div>
+              <span class="kpi-sub" id="stat-peak-month-sub">38.693 Titik (56.4%)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Analytical Charts Grid -->
+        <div class="charts-grid">
+          <div class="chart-card glass-panel">
+            <div class="chart-card-header">
+              <div class="chart-title-wrap">
+                <h3>Sebaran Hotspot per Kabupaten / Kota</h3>
+                <p>Total titik api yang terdeteksi di 14 wilayah administratif</p>
+              </div>
+            </div>
+            <div class="chart-body">
+              <canvas id="chart-kabupaten"></canvas>
+            </div>
+          </div>
+
+          <div class="chart-card glass-panel">
+            <div class="chart-card-header">
+              <div class="chart-title-wrap">
+                <h3>Proporsi Tingkat Kepercayaan</h3>
+                <p>Distribusi tingkat keyakinan sensor (High, Medium, Low)</p>
+              </div>
+            </div>
+            <div class="chart-body chart-body-donut">
+              <canvas id="chart-confidence"></canvas>
+            </div>
+          </div>
+
+          <div class="chart-card glass-panel chart-span-2">
+            <div class="chart-card-header">
+              <div class="chart-title-wrap">
+                <h3>Tren Frekuensi Titik Panas</h3>
+                <p>Fluktuasi deteksi hotspot sepanjang Juni s/d September 2026</p>
+              </div>
+              <div class="chart-toggle-group">
+                <button class="chart-toggle-btn active" data-trend="daily">Harian</button>
+                <button class="chart-toggle-btn" data-trend="monthly">Bulanan</button>
+              </div>
+            </div>
+            <div class="chart-body">
+              <canvas id="chart-trend"></canvas>
+            </div>
+          </div>
+
+          <div class="chart-card glass-panel chart-span-2">
+            <div class="chart-card-header">
+              <div class="chart-title-wrap">
+                <h3>10 Kecamatan Paling Rawan Titik Api</h3>
+                <p>Kecamatan dengan konsentrasi hotspot tertinggi</p>
+              </div>
+            </div>
+            <div class="chart-body">
+              <canvas id="chart-kecamatan"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. Panel Tabel Data -->
+      <div class="drawer-panel" id="panel-table">
+        <div class="table-card glass-panel">
+          <div class="table-toolbar">
+            <div class="table-search-box">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+              <input type="text" id="table-search-input" placeholder="Cari desa, kecamatan, atau kabupaten..." />
+            </div>
+
+            <div class="table-actions">
+              <div class="page-size-selector">
+                <span>Baris:</span>
+                <select id="table-page-size">
+                  <option value="25">25</option>
+                  <option value="50" selected>50</option>
+                  <option value="100">100</option>
+                </select>
+              </div>
+              <button id="btn-export-csv" class="btn btn-outline">
+                📥 Ekspor CSV
+              </button>
+            </div>
+          </div>
+
+          <div class="table-responsive">
+            <table class="data-table" id="data-table">
+              <thead>
+                <tr>
+                  <th width="50">No</th>
+                  <th data-sort="kab">Kabupaten / Kota</th>
+                  <th data-sort="kec">Kecamatan</th>
+                  <th data-sort="desa">Desa / Kelurahan</th>
+                  <th data-sort="tgl">Tanggal</th>
+                  <th data-sort="waktu">Waktu</th>
+                  <th data-sort="conf">Confidence</th>
+                  <th>Koordinat</th>
+                  <th width="100">Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="table-body">
+                <!-- Dynamically populated -->
+              </tbody>
+            </table>
+          </div>
+
+          <div class="table-footer">
+            <div class="table-info" id="table-pagination-info">
+              Menampilkan 1 - 50 dari 68.595 data
+            </div>
+            <div class="table-pagination" id="table-pagination-controls">
+              <button class="btn-page" id="page-first" title="Pertama">««</button>
+              <button class="btn-page" id="page-prev" title="Sebelumnya">«</button>
+              <div class="page-numbers" id="page-numbers"></div>
+              <button class="btn-page" id="page-next" title="Berikutnya">»</button>
+              <button class="btn-page" id="page-last" title="Terakhir">»»</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. Panel Info & Metodologi -->
+      <div class="drawer-panel" id="panel-info">
+        <div class="info-grid">
+          <div class="info-box glass-panel">
+            <div class="info-box-header">
+              <div class="info-icon">🛰️</div>
+              <h4>Satelit NASA-NOAA20</h4>
+            </div>
+            <p>
+              Satelit cuaca polar orbit rendah yang membawa instrumen <strong>VIIRS</strong> (Visible Infrared Imaging Radiometer Suite) 
+              dengan kemampuan resolusi spasial 375 meter, sangat peka terhadap deteksi dini anomali termal permukaan daratan.
+            </p>
+          </div>
+
+          <div class="info-box glass-panel">
+            <div class="info-box-header">
+              <div class="info-icon">🎯</div>
+              <h4>Tingkat Kepercayaan (Confidence)</h4>
+            </div>
+            <p>
+              <strong>High (&gt;80%):</strong> Anomali termal kuat, potensi kebakaran aktif sangat tinggi.<br/>
+              <strong>Medium (30-80%):</strong> Terdeteksi panas terindikasi karhutla.<br/>
+              <strong>Low (&lt;30%):</strong> Rentan noise atau pantulan panas permukaan.
+            </p>
+          </div>
+
+          <div class="info-box glass-panel">
+            <div class="info-box-header">
+              <div class="info-icon">🗺️</div>
+              <h4>Citra Satelit & GIS</h4>
+            </div>
+            <p>
+              Menggunakan sistem proyeksi koordinat <strong>WGS 84 (EPSG:4326)</strong> dengan citra satelit resolusi tinggi 
+              Esri World Imagery yang bebas biaya lisensi, dipadukan dengan klastering data geospasial real-time.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+  <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+
+  <!-- Application Modules -->
+  <script src="js/utils.js"></script>
+  <script src="js/map.js"></script>
+  <script src="js/chart.js"></script>
+  <script src="js/filter.js"></script>
+  <script src="js/app.js"></script>
+
+</body>
+</html>
